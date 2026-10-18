@@ -127,9 +127,36 @@ class Client {
   }
 }
 
+// The browser version of the game is served from ./web (index.html, index.wasm, index.pck ...).
+const fs = require("fs");
+const path = require("path");
+const zlib = require("zlib");
+const WEB = path.join(__dirname, "web");
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm", ".pck": "application/octet-stream", ".png": "image/png" };
+const gzCache = new Map();
+
 const server = http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" });
-  res.end("Karachi Kick Race relay OK. Rooms: " + rooms.size + "\n");
+  let p = decodeURIComponent((req.url || "/").split("?")[0]);
+  if (p === "/status") {
+    res.writeHead(200, { "Content-Type": "text/plain", "Access-Control-Allow-Origin": "*" });
+    return res.end("Karachi Kick Race relay OK. Rooms: " + rooms.size + "\n");
+  }
+  if (p === "/") p = "/index.html";
+  const f = path.join(WEB, p);
+  if (!f.startsWith(WEB) || !fs.existsSync(f) || !fs.statSync(f).isFile()) {
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    return res.end("Not found. Game: / , server status: /status\n");
+  }
+  const headers = { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream", "Cache-Control": "public, max-age=600" };
+  const ext = path.extname(f);
+  if ((ext === ".wasm" || ext === ".pck" || ext === ".js") && /gzip/.test(req.headers["accept-encoding"] || "")) {
+    if (!gzCache.has(f)) gzCache.set(f, zlib.gzipSync(fs.readFileSync(f), { level: 6 }));
+    headers["Content-Encoding"] = "gzip";
+    res.writeHead(200, headers);
+    return res.end(gzCache.get(f));
+  }
+  res.writeHead(200, headers);
+  fs.createReadStream(f).pipe(res);
 });
 
 server.on("upgrade", (req, socket) => {
