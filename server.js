@@ -132,7 +132,7 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 const WEB = path.join(__dirname, "web");
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm", ".pck": "application/octet-stream", ".png": "image/png" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".wasm": "application/wasm", ".pck": "application/octet-stream", ".png": "image/png", ".apk": "application/vnd.android.package-archive" };
 const gzCache = new Map();
 
 const server = http.createServer((req, res) => {
